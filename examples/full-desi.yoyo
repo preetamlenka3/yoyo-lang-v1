@@ -1,0 +1,23 @@
+yo yo
+
+behenchod paisa = 5000
+madarchod target = 3000
+
+agar paisa >= target {
+    bol "Paisa vasool. Scene ON!"
+} warna {
+    bol "Laude, budget kam hai."
+}
+
+jabtak target > 0 {
+    bol "Target: " + target
+    target = target - 1000
+}
+
+jugaad flexScene(name) {
+    bol "Oye " + name + ", full tashan!"
+}
+
+flexScene("YOYO")
+
+bye scene

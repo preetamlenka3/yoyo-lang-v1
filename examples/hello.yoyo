@@ -1,0 +1,12 @@
+yo yo
+
+behenchod naam = "Preetam"
+behenchod score = 100
+
+agar score >= 50 {
+    bol "Scene ON! " + naam
+} warna {
+    bol "Kya bakchodi hai?"
+}
+
+bye scene

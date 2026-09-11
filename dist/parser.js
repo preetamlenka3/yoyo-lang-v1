@@ -1,0 +1,164 @@
+export function parse(tokens) {
+    let p = 0;
+    const cur = () => tokens[p];
+    const at = (v) => cur().value === v;
+    const eat = (v) => { const t = cur(); if (v && t.value !== v)
+        throw new Error(`Line ${t.line}: '${v}' expected, '${t.value}' mila.`); p++; return t; };
+    const skip = () => { while (at("\n") || at(";"))
+        eat(); };
+    const err = (msg) => { const t = cur(); throw new Error(`Line ${t.line}, column ${t.column}: ${msg}`); };
+    const primary = () => { const t = cur(); if (t.type === "number") {
+        eat();
+        return { kind: "literal", value: Number(t.value) };
+    } if (t.type === "string") {
+        eat();
+        return { kind: "literal", value: t.value };
+    } if (at("sahi")) {
+        eat();
+        return { kind: "literal", value: true };
+    } if (at("galat")) {
+        eat();
+        return { kind: "literal", value: false };
+    } if (at("khaali")) {
+        eat();
+        return { kind: "literal", value: null };
+    } if (t.type === "identifier" || t.type === "keyword") {
+        const name = eat().value;
+        if (at("(")) {
+            eat();
+            const args = [];
+            if (!at(")")) {
+                do {
+                    args.push(expression());
+                } while (at(",") && eat());
+            }
+            eat(")");
+            return { kind: "call", name, args };
+        }
+        return { kind: "variable", name };
+    } if (at("(")) {
+        eat();
+        const e = expression();
+        eat(")");
+        return e;
+    } return err("Expression samajh nahi aaya."); };
+    const unary = () => { if (at("!") || at("-")) {
+        const op = eat().value;
+        return { kind: "unary", op, expr: unary() };
+    } return primary(); };
+    const mul = () => { let e = unary(); while (["*", "/", "%"].includes(cur().value)) {
+        const op = eat().value;
+        e = { kind: "binary", op, left: e, right: unary() };
+    } return e; };
+    const add = () => { let e = mul(); while (["+", "-"].includes(cur().value)) {
+        const op = eat().value;
+        e = { kind: "binary", op, left: e, right: mul() };
+    } return e; };
+    const cmp = () => { let e = add(); while (["==", "!=", ">", "<", ">=", "<="].includes(cur().value)) {
+        const op = eat().value;
+        e = { kind: "binary", op, left: e, right: add() };
+    } return e; };
+    const and = () => { let e = cmp(); while (at("&&")) {
+        eat();
+        e = { kind: "binary", op: "&&", left: e, right: cmp() };
+    } return e; };
+    const expression = () => { let e = and(); while (at("||")) {
+        eat();
+        e = { kind: "binary", op: "||", left: e, right: and() };
+    } return e; };
+    const block = () => { eat("{"); const b = []; skip(); while (!at("}") && !at("eof")) {
+        b.push(statement());
+        skip();
+    } eat("}"); return b; };
+    const statement = () => { skip(); const t = cur(); if (at("yo")) {
+        eat();
+        return statement();
+    } if (at("bye")) {
+        eat();
+        if (at("scene"))
+            eat();
+        return { kind: "expr", expr: { kind: "literal", value: null } };
+    } if (at("behenchod") || at("madarchod") || at("bhosadike") || at("bakchod") || at("jhaatu") || at("laude") || at("chutiya") || at("harami")) {
+        eat();
+        const n = eat();
+        if (n.type !== "identifier" && n.type !== "keyword")
+            err("Variable name chahiye.");
+        eat("=");
+        return { kind: "var", name: n.value, expr: expression() };
+    } if (at("bol")) {
+        eat();
+        return { kind: "print", expr: expression() };
+    } if (at("agar")) {
+        eat();
+        const test = expression();
+        const then = block();
+        let elseBody = [];
+        skip();
+        if (at("warna")) {
+            eat();
+            elseBody = block();
+        }
+        return { kind: "if", test, then, elseBody };
+    } if (at("jabtak")) {
+        eat();
+        return { kind: "while", test: expression(), body: block() };
+    } if (at("jugaad")) {
+        eat();
+        const n = eat().value;
+        eat("(");
+        const params = [];
+        if (!at(")")) {
+            do {
+                params.push(eat().value);
+            } while (at(",") && eat());
+        }
+        eat(")");
+        return { kind: "function", name: n, params, body: block() };
+    } if (at("wapas")) {
+        eat();
+        return { kind: "return", expr: at("\n") || at("}") ? null : expression() };
+    } if (at("tod")) {
+        eat();
+        return { kind: "break" };
+    } if (at("chalda")) {
+        eat();
+        return { kind: "continue" };
+    } if (t.type === "identifier" || t.type === "keyword") {
+        const name = eat().value;
+        if (at("=")) {
+            eat();
+            return { kind: "assign", name, expr: expression() };
+        }
+        if (at("(")) {
+            eat();
+            const args = [];
+            if (!at(")")) {
+                do {
+                    args.push(expression());
+                } while (at(",") && eat());
+            }
+            eat(")");
+            return { kind: "expr", expr: { kind: "call", name, args } };
+        }
+        err("Statement samajh nahi aaya.");
+    } return err(`'${t.value}' valid statement nahi hai.`); };
+    const body = [];
+    skip();
+    if (at("yo")) {
+        eat();
+        if (at("yo"))
+            eat();
+        skip();
+    }
+    while (!at("eof")) {
+        if (at("bye")) {
+            eat();
+            if (at("scene"))
+                eat();
+            break;
+        }
+        body.push(statement());
+        skip();
+    }
+    return { kind: "program", body };
+}

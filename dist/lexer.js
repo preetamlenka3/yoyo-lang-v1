@@ -1,0 +1,83 @@
+const keywords = new Set(["yo", "bye", "behenchod", "madarchod", "bhosadike", "bakchod", "jhaatu", "laude", "chutiya", "harami", "bol", "agar", "warna", "jabtak", "jugaad", "wapas", "tod", "chalda", "sahi", "galat", "khaali"]);
+export function tokenize(source) { const out = []; let i = 0, line = 1, column = 1; const push = (type, value, l = line, c = column) => out.push({ type, value, line: l, column: c }); const advance = (n = 1) => { for (let k = 0; k < n; k++) {
+    if (source[i] === "\n") {
+        line++;
+        column = 1;
+    }
+    else
+        column++;
+    i++;
+} }; while (i < source.length) {
+    const ch = source[i];
+    if (ch === " " || ch === "\t" || ch === "\r") {
+        advance();
+        continue;
+    }
+    if (ch === "#") {
+        while (i < source.length && source[i] !== "\n")
+            advance();
+        continue;
+    }
+    if (ch === "\n") {
+        push("newline", "\n");
+        advance();
+        continue;
+    }
+    const l = line, c = column;
+    if (ch === '"' || ch === "'") {
+        const quote = ch;
+        advance();
+        let s = "";
+        while (i < source.length && source[i] !== quote) {
+            if (source[i] === "\\" && i + 1 < source.length) {
+                const n = source[i + 1];
+                s += n === "n" ? "\n" : n === "t" ? "\t" : n;
+                advance(2);
+            }
+            else {
+                s += source[i];
+                advance();
+            }
+        }
+        if (source[i] !== quote)
+            throw new Error(`Line ${l}: string band nahi hui.`);
+        advance();
+        push("string", s, l, c);
+        continue;
+    }
+    if (/[0-9]/.test(ch)) {
+        let s = "";
+        while (i < source.length && /[0-9.]/.test(source[i])) {
+            s += source[i];
+            advance();
+        }
+        push("number", s, l, c);
+        continue;
+    }
+    if (/[A-Za-z_]/.test(ch)) {
+        let s = "";
+        while (i < source.length && /[A-Za-z0-9_]/.test(source[i])) {
+            s += source[i];
+            advance();
+        }
+        push(keywords.has(s) ? "keyword" : "identifier", s, l, c);
+        continue;
+    }
+    const two = source.slice(i, i + 2);
+    if (["==", "!=", "<=", ">=", "&&", "||"].includes(two)) {
+        push("operator", two, l, c);
+        advance(2);
+        continue;
+    }
+    if ("=+-*/%<>!".includes(ch)) {
+        push("operator", ch, l, c);
+        advance();
+        continue;
+    }
+    if ("(){}[],;".includes(ch)) {
+        push("punctuation", ch, l, c);
+        advance();
+        continue;
+    }
+    throw new Error(`Line ${l}, column ${c}: '${ch}' samajh nahi aaya.`);
+} push("eof", "", line, column); return out; }
